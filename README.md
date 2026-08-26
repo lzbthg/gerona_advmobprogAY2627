@@ -1,7 +1,6 @@
 # gerona_advmobprog
 
-Lab Activity 2: Discussion
-The Product model defines the structure of the product data coming from the API, including things like the title, price, category, rating, stock, reviews, dimensions, and metadata. Its fromJson() method takes the raw JSON response and turns it into a proper Dart Product object that the rest of the app can work with.
+Lab Activity 2: The Product model defines the structure of the product data coming from the API, including things like the title, price, category, rating, stock, reviews, dimensions, and metadata. Its fromJson() method takes the raw JSON response and turns it into a proper Dart Product object that the rest of the app can work with.
 
 The ProductService handles the actual API call, sending an HTTP GET request to fetch the product data. Once the response comes back, it decodes the JSON and maps each item into a Product object.
 
