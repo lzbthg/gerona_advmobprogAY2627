@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -24,7 +23,7 @@ class ProductScreen extends StatefulWidget {
 class _ProductScreenState extends State<ProductScreen> {
   late final Future<List<Product>> _productsFuture;
 
-  // ENHANCEMENT 1:
+  // LAB_ACT2 ENHANCEMENT 1:
   // Stores the text entered in the search bar.
   String _searchQuery = '';
 
@@ -38,14 +37,12 @@ class _ProductScreenState extends State<ProductScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16.w,
-          vertical: 16.h,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ENHANCEMENT 1: Added a search bar above the product list.
+            // LAB_ACT2 ENHANCEMENT 1:
+            // Added a search bar above the product list.
             TextField(
               onChanged: (value) {
                 setState(() {
@@ -111,15 +108,9 @@ class _ProductScreenState extends State<ProductScreen> {
                     return true;
                   }
 
-                  return product.title
-                          .toLowerCase()
-                          .contains(_searchQuery) ||
-                      product.brand
-                          .toLowerCase()
-                          .contains(_searchQuery) ||
-                      product.category
-                          .toLowerCase()
-                          .contains(_searchQuery);
+                  return product.title.toLowerCase().contains(_searchQuery) ||
+                      product.brand.toLowerCase().contains(_searchQuery) ||
+                      product.category.toLowerCase().contains(_searchQuery);
                 }).toList();
 
                 if (filteredProducts.isEmpty) {
@@ -139,8 +130,7 @@ class _ProductScreenState extends State<ProductScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: filteredProducts.length,
-                  gridDelegate:
-                      SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 10.w,
                     mainAxisSpacing: 10.h,
@@ -156,14 +146,15 @@ class _ProductScreenState extends State<ProductScreen> {
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: InkWell(
-                        // ENHANCEMENT 2: Opens the product details page when the user taps a product card.
+                        // LAB_ACT2 ENHANCEMENT 2:
+                        // Opens the product details page when the user taps a product card.
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  ProductDetailsScreen(
+                              builder: (context) => ProductDetailsScreen(
                                 product: product,
+                                showAddToCart: true,
                               ),
                             ),
                           );
@@ -176,17 +167,14 @@ class _ProductScreenState extends State<ProductScreen> {
                                 product.thumbnail,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
-                                errorBuilder: (_, _, _) => Icon(
-                                  Icons.image,
-                                  size: 24.sp,
-                                ),
+                                errorBuilder: (_, _, _) =>
+                                    Icon(Icons.image, size: 24.sp),
                               ),
                             ),
                             Padding(
                               padding: EdgeInsets.all(8.r),
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   CustomText(
                                     text: product.title,
@@ -198,7 +186,7 @@ class _ProductScreenState extends State<ProductScreen> {
                                   SizedBox(height: 4.h),
                                   CustomText(
                                     text:
-                                        '\$${product.price.toStringAsFixed(2)}',
+                                        '₱${product.price.toStringAsFixed(2)}',
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -219,4 +207,3 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 }
-

@@ -5,7 +5,7 @@ class ThemeProvider with ChangeNotifier {
 
   bool get isDark => _isDark;
 
-  // ENHANCEMENT 3:
+  // LAB_ACT2 ENHANCEMENT 3:
   // Provides the light theme used by the application.
   ThemeData get lightTheme => ThemeData(
         brightness: Brightness.light,
@@ -16,7 +16,7 @@ class ThemeProvider with ChangeNotifier {
         useMaterial3: true,
       );
 
-  // ENHANCEMENT 3:
+  // LAB_ACT2 ENHANCEMENT 3:
   // Provides the dark theme used by the application.
   ThemeData get darkTheme => ThemeData(
         brightness: Brightness.dark,
@@ -27,7 +27,7 @@ class ThemeProvider with ChangeNotifier {
         useMaterial3: true,
       );
 
-  // ENHANCEMENT 3:
+  // LAB_ACT2 ENHANCEMENT 3:
   // Switches between light mode and dark mode.
   void toggleTheme() {
     _isDark = !_isDark;

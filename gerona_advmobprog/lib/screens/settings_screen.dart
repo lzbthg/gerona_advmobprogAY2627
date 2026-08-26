@@ -24,7 +24,8 @@ class SettingsScreen extends StatelessWidget {
           builder: (context, themeProvider, child) {
             return Card(
               child: SwitchListTile(
-                // ENHANCEMENT 3: Dark/light mode switch has been moved to the Settings page.
+                // LAB_ACT2 ENHANCEMENT 3: 
+                // Dark/light mode switch has been moved to the Settings page.
                 title: CustomText(
                   text: 'Dark Mode',
                   fontSize: 16.sp,
@@ -43,7 +44,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 value: themeProvider.isDark,
                 onChanged: (value) {
-                  // ENHANCEMENT 3: Changes the application theme.
+                  // LAB_ACT2 ENHANCEMENT 3: 
+                  // Changes the application theme.
                   themeProvider.toggleTheme();
                 },
               ),

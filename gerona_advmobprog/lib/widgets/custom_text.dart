@@ -36,7 +36,7 @@ class CustomText extends StatelessWidget {
         fontWeight: fontWeight,
         fontStyle: fontStyle,
         letterSpacing: letterSpacing,
-      )
+      ),
     );
   }
 }

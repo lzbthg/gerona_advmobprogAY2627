@@ -8,13 +8,17 @@ import 'package:provider/provider.dart';
 // screens
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/cart_screen.dart';
 
 // providers
 import 'providers/theme_provider.dart';
+import 'providers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) async {
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((
+    _,
+  ) async {
     await dotenv.load(fileName: 'assets/.env');
     runApp(const GeronaAdvMobProg());
   });
@@ -25,8 +29,11 @@ class GeronaAdvMobProg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+      ],
       child: ScreenUtilInit(
         designSize: const Size(412, 715),
         minTextAdapt: true,
@@ -37,19 +44,18 @@ class GeronaAdvMobProg extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
 
-            // ENHANCEMENT 3:
+            // LAB_ACT2 ENHANCEMENT 3:
             // Uses the themes provided by ThemeProvider.
             theme: themeModel.lightTheme,
             darkTheme: themeModel.darkTheme,
-            themeMode: themeModel.isDark
-                ? ThemeMode.dark
-                : ThemeMode.light,
+            themeMode: themeModel.isDark ? ThemeMode.dark : ThemeMode.light,
 
             title: 'E-Commerce App',
             initialRoute: '/home',
             routes: {
               '/home': (context) => const HomeScreen(),
               '/settings': (context) => const SettingsScreen(),
+              '/cart': (context) => const CartScreen(),
             },
           );
         },
