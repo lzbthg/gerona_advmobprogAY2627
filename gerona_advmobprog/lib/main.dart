@@ -9,6 +9,11 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/cart_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/signin_screen.dart';
+
+// models
+import 'models/user.dart';
 
 // providers
 import 'providers/theme_provider.dart';
@@ -51,9 +56,15 @@ class GeronaAdvMobProg extends StatelessWidget {
             themeMode: themeModel.isDark ? ThemeMode.dark : ThemeMode.light,
 
             title: 'E-Commerce App',
-            initialRoute: '/home',
+            initialRoute: '/splash',
             routes: {
-              '/home': (context) => const HomeScreen(),
+              '/splash': (context) => const SplashScreen(),
+              '/signin': (context) => const SigninScreen(),
+              '/home': (context) {
+                final user =
+                    ModalRoute.of(context)?.settings.arguments as User?;
+                return HomeScreen(user: user);
+              },
               '/settings': (context) => const SettingsScreen(),
               '/cart': (context) => const CartScreen(),
             },

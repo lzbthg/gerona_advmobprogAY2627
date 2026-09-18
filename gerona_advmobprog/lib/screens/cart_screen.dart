@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-import '../models/cart_model.dart';
+import '../models/cart.dart';
 import '../services/cart_service.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/custom_text.dart';
 import 'product_details_screen.dart';
 
 class CartScreen extends StatefulWidget {
-  final int userId;
-
-  const CartScreen({super.key, this.userId = 1});
+  const CartScreen({super.key});
 
   @override
   State<CartScreen> createState() => _CartScreenState();

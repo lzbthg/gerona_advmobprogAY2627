@@ -1,19 +1,35 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/cart_model.dart';
-import '../models/product_model.dart';
+import '../models/cart.dart';
+import '../models/product.dart';
 import '../services/cart_service.dart';
 
 class CartProvider extends ChangeNotifier {
   final CartService _cartService = CartService();
-  final int userId;
+  int _userId;
 
   Cart? _cart;
   Future<void>? _loadFuture;
 
-  CartProvider({this.userId = 1});
+  // ignore: prefer_initializing_formals
+  CartProvider({int userId = 1}) : _userId = userId;
 
+  int get userId => _userId;
   Cart? get cart => _cart;
+
+  // LAB_ACT4 ENHANCEMENT 3:
+  // Lets the app point this provider at the currently signed-in user (rather
+  // than a fixed id), so the Cart tab and Profile screen stay in sync with
+  // whoever is logged in. Reloads the cart whenever the user actually changes.
+  void setUserId(int newUserId) {
+    if (_userId == newUserId) {
+      return;
+    }
+    _userId = newUserId;
+    _cart = null;
+    _loadFuture = null;
+    notifyListeners();
+  }
 
   Future<void> loadCart() {
     return _loadFuture ??= _loadCart();

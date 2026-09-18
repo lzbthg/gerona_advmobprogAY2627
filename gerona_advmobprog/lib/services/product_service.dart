@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../constants.dart';
-import '../models/product_model.dart';
+import '../models/product.dart';
 
 class ProductService {
   // Gets all products from the DummyJSON API.

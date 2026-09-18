@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // models
-import '../models/product_model.dart';
+import '../models/product.dart';
 
 // services
 import '../services/product_service.dart';
