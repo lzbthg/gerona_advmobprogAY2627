@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _syncCartUser(User user) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<CartProvider>().setUserId(user.id);
+        context.read<CartProvider>().configureForUser(user);
       }
     });
   }
@@ -81,7 +81,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                 actions: [
                   IconButton(
-                    icon: Icon(Icons.settings, size: 24.sp, color: Colors.white),
+                    icon: Icon(
+                      Icons.settings,
+                      size: 24.sp,
+                      color: Colors.white,
+                    ),
                     onPressed: () => Navigator.pushNamed(context, '/settings'),
                   ),
                 ],
@@ -128,7 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ChatScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        userDisplayName: _user?.fullName.isNotEmpty == true
+                            ? _user!.fullName
+                            : _user?.username,
+                      ),
+                    ),
                   );
                 },
                 child: const Icon(Icons.chat_outlined),

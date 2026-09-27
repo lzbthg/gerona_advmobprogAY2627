@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "749492269758",
+    "project_id": "gerona-mobprog",
+    "storage_bucket": "gerona-mobprog.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749492269758:android:c8826fa3fe72ba02b964ef",
+        "android_client_info": {
+          "package_name": "com.example.flutter_connection"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe94Tgd30rvYWuXo0ThaHkCYVSLDZhBrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749492269758:android:969a44a196e3537ab964ef",
+        "android_client_info": {
+          "package_name": "com.example.gerona_advmobprog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe94Tgd30rvYWuXo0ThaHkCYVSLDZhBrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

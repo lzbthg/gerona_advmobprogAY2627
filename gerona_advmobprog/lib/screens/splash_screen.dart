@@ -45,8 +45,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.lightBg,
+      backgroundColor: colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -60,6 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
               text: 'NUBD Exchange',
               fontSize: 20.sp,
               fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 32.h),
