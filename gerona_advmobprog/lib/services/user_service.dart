@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../constants.dart';
 import '../models/user.dart';
@@ -11,12 +12,13 @@ ValueNotifier<UserService> userService = ValueNotifier(UserService());
 // Enhancement 1 & 2:
 // UserService is the single entry point for authentication, supporting two
 // interchangeable backends selected by the user at Sign In/Sign Up
-// (LoginType.dummyJson vs LoginType.firebase). 
+// (LoginType.dummyJson vs LoginType.firebase).
 class UserService {
   Map<String, dynamic> data = {};
 
   final firebase_auth.FirebaseAuth _firebaseAuth =
       firebase_auth.FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   firebase_auth.User? get currentUser => _firebaseAuth.currentUser;
 
@@ -136,6 +138,42 @@ class UserService {
 
   Future<User> getUser() async {
     final userData = await getUserData();
+    final fbUser = currentUser;
+    if (fbUser != null &&
+        LoginType.fromStorage(userData['loginType'] as String?) ==
+            LoginType.firebase) {
+      try {
+        final profile = await _firestore
+            .collection('Users')
+            .doc(fbUser.uid)
+            .get();
+        final remote = profile.data();
+        if (remote != null) {
+          // The Firebase directory is the durable source for names and the
+          // separate handle. Refresh the local cache so the profile screen
+          // consistently displays the same full name as DummyJSON accounts.
+          for (final key in ['firstName', 'lastName', 'email']) {
+            final value = (remote[key] ?? '').toString().trim();
+            if (value.isNotEmpty) userData[key] = value;
+          }
+          // Keep this account's locally entered handle if Firestore has an
+          // older directory value. Handles are cached per signed-in uid.
+          final cachedUid = (userData['uid'] ?? '').toString();
+          final remoteUsername = (remote['username'] ?? '').toString().trim();
+          if (cachedUid != fbUser.uid ||
+              (userData['username'] ?? '').toString().trim().isEmpty) {
+            if (remoteUsername.isNotEmpty) {
+              userData['username'] = remoteUsername;
+            }
+          }
+          userData['uid'] = fbUser.uid;
+          userData['loginType'] = LoginType.firebase.storageValue;
+          await saveUserData(userData);
+        }
+      } catch (e) {
+        debugPrint('Failed to load Firebase profile: $e');
+      }
+    }
     return User.fromJson(userData);
   }
 
@@ -187,6 +225,7 @@ class UserService {
 
     if (credential.user != null) {
       await _cacheFirebaseSnapshot(credential.user!);
+      await _syncUserDirectory(credential.user!);
     }
 
     return credential;
@@ -223,6 +262,7 @@ class UserService {
         firstName: firstName,
         lastName: lastName,
       );
+      await _syncUserDirectory(_firebaseAuth.currentUser ?? credential.user!);
     }
 
     return credential;
@@ -236,9 +276,21 @@ class UserService {
     final loginType = await getLoginType();
 
     if (loginType == LoginType.firebase) {
-      await currentUser!.updateDisplayName(username);
-      await currentUser!.reload();
-      await _cacheFirebaseSnapshot(_firebaseAuth.currentUser!);
+      // Keep Firebase displayName for the person's name. Username is a
+      // separate handle and must not replace firstName/lastName.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', username);
+      final fbUser = currentUser;
+      if (fbUser == null) throw Exception('No Firebase user is signed in.');
+      final cached = await getUserData();
+      await _firestore.collection('Users').doc(fbUser.uid).set({
+        'uid': fbUser.uid,
+        'email': fbUser.email ?? cached['email'] ?? '',
+        'firstName': cached['firstName'] ?? '',
+        'lastName': cached['lastName'] ?? '',
+        'username': username,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } else {
       // DummyJSON demo accounts have no real backend to persist this
       // change against, so we simulate it by updating the cached profile.
@@ -258,8 +310,16 @@ class UserService {
       final firebase_auth.AuthCredential credential = firebase_auth
           .EmailAuthProvider.credential(email: email, password: password);
 
+      final uid = currentUser?.uid;
       await currentUser!.reauthenticateWithCredential(credential);
       await currentUser!.delete();
+      if (uid != null) {
+        try {
+          await _firestore.collection('Users').doc(uid).delete();
+        } catch (e) {
+          debugPrint('Failed to remove user directory entry: $e');
+        }
+      }
       await _firebaseAuth.signOut();
     }
 
@@ -290,6 +350,30 @@ class UserService {
     // change is simulated.
   }
 
+  // Lab Activity 6 (Firebase Part II):
+  // Keeps a lightweight public profile for this Firebase account in
+  // Firestore's "Users" collection, so the Chat tab can list every
+  // registered user. Called after sign in/sign up (and after a username
+  // change) so both new and pre-existing Firebase accounts end up with a
+  // directory entry. Best-effort: a failure here must not block auth.
+  Future<void> _syncUserDirectory(firebase_auth.User fbUser) async {
+    try {
+      final cached = await getUserData();
+      await _firestore.collection('Users').doc(fbUser.uid).set({
+        'uid': fbUser.uid,
+        'email': fbUser.email ?? '',
+        'firstName': cached['firstName'] ?? '',
+        'lastName': cached['lastName'] ?? '',
+        'username': (cached['username'] as String?) ??
+            fbUser.displayName ??
+            '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Failed to sync user directory: $e');
+    }
+  }
+
   // Builds/refreshes the locally-cached User snapshot from the current
   // FirebaseAuth user so Splash/Home/Profile screens can read a consistent
   // User model regardless of which backend authenticated the session.
@@ -301,6 +385,18 @@ class UserService {
     String? lastName,
   }) async {
     final existing = await getUserData();
+    final sameFirebaseUser = existing['uid'] == fbUser.uid;
+    Map<String, dynamic> directory = {};
+    try {
+      directory = (await _firestore
+              .collection('Users')
+              .doc(fbUser.uid)
+              .get())
+          .data() ??
+          {};
+    } catch (e) {
+      debugPrint('Failed to read Firebase profile: $e');
+    }
     final existingFirstName = (existing['firstName'] as String?) ?? '';
     final existingLastName = (existing['lastName'] as String?) ?? '';
 
@@ -317,14 +413,28 @@ class UserService {
     final snapshot = <String, dynamic>{
       'id': 0,
       'uid': fbUser.uid,
-      'username': fbUser.displayName ?? existing['username'] ?? '',
+      'username': (sameFirebaseUser &&
+              (existing['username'] as String?)?.isNotEmpty == true)
+          ? existing['username']
+          : directory['username'] ??
+              existing['username'] ??
+          fbUser.displayName ??
+          '',
       'email': fbUser.email ?? existing['email'] ?? '',
       'firstName':
           firstName ??
-          (existingFirstName.isNotEmpty ? existingFirstName : derivedFirstName),
+          ((directory['firstName'] as String?)?.isNotEmpty == true
+              ? directory['firstName']
+              : sameFirebaseUser && existingFirstName.isNotEmpty
+              ? existingFirstName
+              : derivedFirstName),
       'lastName':
           lastName ??
-          (existingLastName.isNotEmpty ? existingLastName : derivedLastName),
+          ((directory['lastName'] as String?)?.isNotEmpty == true
+              ? directory['lastName']
+              : sameFirebaseUser && existingLastName.isNotEmpty
+              ? existingLastName
+              : derivedLastName),
       'gender': existing['gender'] ?? '',
       'image': fbUser.photoURL ?? existing['image'] ?? '',
       'accessToken': '',

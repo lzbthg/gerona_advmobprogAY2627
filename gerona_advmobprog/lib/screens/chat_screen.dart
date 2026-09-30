@@ -1,201 +1,189 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../constants.dart';
+import '../services/chat_service.dart';
+import '../services/user_service.dart';
 import '../widgets/custom_text.dart';
+import 'chat_detail_screen.dart';
 
-// Enhancement (Chat Support):
-// A real (if simple, fully client-side) chat: messages are held in state,
-// the input field and send button work, and a small keyword-based responder
-// replies automatically. Colors are pulled from the current Theme's
-// ColorScheme (not hardcoded), so this screen matches Profile/Cart/Settings
-// and switches correctly with the app's dark mode toggle.
+// Lab Activity 6 (Firebase Part II):
+// Lists every registered Firebase user from Firestore's "Users" collection
+// (Enhancement 1: excluding the signed-in user), with a search bar to filter
+// by name or email (Enhancement 2). Tapping a user opens a 1:1 conversation.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, this.userDisplayName});
-
-  // Optional: pass the signed-in user's name for a personalized greeting.
-  final String? userDisplayName;
+  const ChatScreen({super.key});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatMessage {
-  _ChatMessage({required this.text, required this.isUser});
-
-  final String text;
-  final bool isUser;
-}
-
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final List<_ChatMessage> _messages = [];
-  bool _isBotTyping = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final name = widget.userDisplayName;
-    _messages.add(
-      _ChatMessage(
-        text: name != null && name.isNotEmpty
-            ? 'Hello, $name! Welcome to our customer support. How can we help you today?'
-            : 'Hello! Welcome to our customer support. How can we help you today?',
-        isUser: false,
-      ),
-    );
-  }
+  final TextEditingController _searchController = TextEditingController();
+  final ChatService _chatService = ChatService();
+  String _searchText = '';
 
   @override
   void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  void _sendMessage() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
-      _isBotTyping = true;
-    });
-    _controller.clear();
-    _scrollToBottom();
-
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!mounted) return;
-      setState(() {
-        _isBotTyping = false;
-        _messages.add(
-          _ChatMessage(text: _generateReply(text), isUser: false),
-        );
-      });
-      _scrollToBottom();
-    });
-  }
-
-  String _generateReply(String message) {
-    final lower = message.toLowerCase();
-
-    if (lower.contains('order') || RegExp(r'#?ord-?\d+').hasMatch(lower)) {
-      return 'Thanks for the details! Your order is currently being processed. We appreciate your patience.';
-    }
-    if (lower.contains('refund') || lower.contains('cancel')) {
-      return 'I can help with that. Could you share your order number so I can look into the refund/cancellation?';
-    }
-    if (lower.contains('shipping') || lower.contains('deliver')) {
-      return 'Standard delivery usually takes 3-5 business days. Do you have an order number I can check for you?';
-    }
-    if (lower.contains('hello') || lower.contains('hi') || lower.contains('hey')) {
-      return 'Hi there! What can I help you with today?';
-    }
-    if (lower.contains('thank')) {
-      return "You're welcome! Is there anything else I can help you with?";
-    }
-    return 'Got it! Could you share a bit more detail, such as your order number, so I can assist further?';
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final currentUserEmail = userService.value.currentUser?.email;
+    final currentUid = userService.value.currentUser?.uid;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: CustomText(
-          text: 'Chat Support',
-          fontSize: 20.sp,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      body: Column(
+    // DummyJSON demo sessions have no Firebase identity, so there is no
+    // real chat account to send/receive messages as.
+    if (currentUid == null || currentUid.isEmpty) {
+      return _gate(
+        'Chat is only available for Firebase accounts. Sign in with '
+        'Firebase to message other registered users.',
+      );
+    }
+
+    return SafeArea(
+      child: Column(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-              itemCount: _messages.length + (_isBotTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index >= _messages.length) {
-                  return _typingBubble(colors);
-                }
-                final message = _messages[index];
-                return _messageBubble(
-                  text: message.text,
-                  isUser: message.isUser,
-                  colors: colors,
-                );
+          SizedBox(height: 12.h),
+
+          // Enhancement 2: search bar to filter users by name or email.
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: (value) {
+                setState(() => _searchText = value.trim().toLowerCase());
               },
+              decoration: InputDecoration(
+                hintText: 'Search by name or email...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Icons.cancel),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchText = '';
+                          });
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
             ),
           ),
 
-          // Message input.
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      decoration: BoxDecoration(
-                        color: colors.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(24.r),
+          SizedBox(height: 8.h),
+
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _chatService.getUsersStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _message('Error loading users.');
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _message('No registered users found yet.');
+                }
+
+                // Enhancement 1: exclude the current logged-in user.
+                var users = snapshot.data!
+                    .where((user) => (user['uid'] ?? '') != currentUid)
+                    .toList();
+
+                // Enhancement 2: filter by name or email.
+                if (_searchText.isNotEmpty) {
+                  users = users.where((user) {
+                    final firstName =
+                        (user['firstName'] ?? '').toString().toLowerCase();
+                    final lastName =
+                        (user['lastName'] ?? '').toString().toLowerCase();
+                    final username =
+                        (user['username'] ?? '').toString().toLowerCase();
+                    final email = (user['email'] ?? '').toString().toLowerCase();
+                    return firstName.contains(_searchText) ||
+                        lastName.contains(_searchText) ||
+                        username.contains(_searchText) ||
+                        email.contains(_searchText);
+                  }).toList();
+                }
+
+                if (users.isEmpty) {
+                  return _message('No users match your search.');
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                  itemCount: users.length,
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    final firstName = (user['firstName'] ?? '').toString();
+                    final displayName = firstName.isNotEmpty
+                        ? firstName
+                        : (user['email'] ?? 'Unknown').toString();
+                    final initial =
+                        displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 10.h),
+                      elevation: 0,
+                      color: colors.surfaceContainerLow,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
                       ),
-                      child: TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _sendMessage(),
-                        style: TextStyle(fontSize: 14.sp),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(fontSize: 14.sp),
-                          contentPadding: EdgeInsets.symmetric(vertical: 12.h),
+                      child: ListTile(
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        leading: CircleAvatar(
+                          radius: 22.r,
+                          backgroundColor: AppColors.navy,
+                          child: CustomText(
+                            text: initial,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
+                        title: CustomText(
+                          text: displayName,
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        subtitle: CustomText(
+                          text: (user['email'] ?? 'No email').toString(),
+                          fontSize: 12.sp,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatDetailScreen(
+                                currentUserEmail: currentUserEmail ?? '',
+                                tappedUser: user,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  GestureDetector(
-                    onTap: _sendMessage,
-                    child: CircleAvatar(
-                      radius: 22.r,
-                      backgroundColor: colors.primary,
-                      child: Icon(
-                        Icons.send,
-                        color: colors.onPrimary,
-                        size: 20.sp,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -203,53 +191,36 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _messageBubble({
-    required String text,
-    required bool isUser,
-    required ColorScheme colors,
-  }) {
-    final bubbleColor = isUser ? colors.primary : colors.surfaceContainerLow;
-    final textColor = isUser ? colors.onPrimary : colors.onSurface;
-
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: 280.w),
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
-            bottomLeft: Radius.circular(isUser ? 16.r : 0),
-            bottomRight: Radius.circular(isUser ? 0 : 16.r),
-          ),
+  Widget _gate(String message) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(24.r),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.local_fire_department_outlined,
+                size: 48.sp, color: colors.onSurfaceVariant),
+            SizedBox(height: 12.h),
+            CustomText(
+              text: message,
+              fontSize: 13.sp,
+              color: colors.onSurfaceVariant,
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-        child: CustomText(text: text, fontSize: 14.sp, color: textColor),
       ),
     );
   }
 
-  Widget _typingBubble(ColorScheme colors) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
-            bottomRight: Radius.circular(16.r),
-          ),
-        ),
-        child: CustomText(
-          text: 'Typing...',
-          fontSize: 13.sp,
-          color: colors.onSurfaceVariant,
-        ),
+  Widget _message(String text) {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: CustomText(
+        text: text,
+        fontSize: 14.sp,
+        color: colors.onSurfaceVariant,
       ),
     );
   }

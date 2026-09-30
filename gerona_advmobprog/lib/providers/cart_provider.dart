@@ -114,6 +114,12 @@ class CartProvider extends ChangeNotifier {
   }
 
   Future<void> addProduct(Product product) async {
+    // Firebase carts are local; load any saved items before updating so an
+    // add from the shop does not replace the existing local cart.
+    if (_isLocalCart && _cart == null) {
+      _cart = await _loadLocalCart();
+    }
+
     // DummyJSON accounts still round-trip through the real /carts/add
     // endpoint; local-cart accounts skip the network call entirely, since
     // there is no DummyJSON account behind them to add anything to.

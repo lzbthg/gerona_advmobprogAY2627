@@ -31,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    _refreshUser();
   }
 
   bool get _isDummyAccount => _currentUser.loginType == LoginType.dummyJson;
@@ -297,7 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
         title: CustomText(
-          text: user.firstName.isNotEmpty ? user.firstName : user.username,
+          text: user.fullName.isNotEmpty ? user.fullName : user.username,
           fontSize: 20.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -443,7 +444,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _infoRow(Icons.wc_outlined, 'Gender', user.gender),
           Divider(height: 20.h, color: colorScheme.outlineVariant),
 
-          _infoRow(Icons.badge_outlined, 'User ID', '${user.id}'),
+          if (user.id > 0)
+            _infoRow(Icons.badge_outlined, 'User ID', '${user.id}'),
 
           if (user.age > 0) ...[
             Divider(height: 20.h, color: colorScheme.outlineVariant),
@@ -479,19 +481,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _accountActionsCard() {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8.h),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return Material(
+      color: colorScheme.surfaceContainerLow,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(16.r),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           ListTile(
